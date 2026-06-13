@@ -506,7 +506,10 @@ function computeStatus(m, now){
   if(!m.utc) return m;
   const k=new Date(m.utc).getTime(), n=now.getTime();
   if(n < k) m.status="scheduled";
-  else if(n >= k && n < k + MATCH_MIN*60000){ m.status="live"; if(m.minute==null) m.minute=Math.max(1,Math.min(90,Math.floor((n-k)/60000))); }
+  // A kicked-off match is "live", but we DON'T invent a minute from wall-clock
+  // time — that ignores half-time/stoppage and would show a wrong, jumpy number.
+  // The match minute is only ever taken from a live feed (see applyOpenfootball).
+  else if(n >= k && n < k + MATCH_MIN*60000){ m.status="live"; }
   else m.status="finished";
   return m;
 }
@@ -517,6 +520,7 @@ function refreshStatuses(){
 
 function statusLabel(m){
   if(m.status==="live"){
+    if(m.phase==="HT") return t("ht");            // half-time break — minute is frozen at 45
     if(m.minute!=null) return `${t("live")} · ${m.minute}'`;
     return t("live");
   }
@@ -686,6 +690,7 @@ function applyOpenfootball(data){
       const st = String(mm.status||"").toLowerCase();
       if(st==="live"||mm.live===true||mm.status==="LIVE") m.status="live";
       else if(st==="finished"||st==="ft"||st==="aet"||st==="pen") m.status="finished";
+      if(mm.phase!=null) m.phase=mm.phase; // raw period (e.g. "HT","1H","2H")
       if(mm.minute!=null && m.status==="live") m.minute=+mm.minute;
       // score
       const sc = mm.score && (mm.score.ft || mm.score.ht || mm.score);
@@ -786,9 +791,14 @@ async function loadData(){
     try{ const of=await fetchJSON(PUBLIC_OPENFOOTBALL); if(applyOpenfootball(of)>0) live=true; }
     catch(e){ /* ignore */ }
   }
-  // 2) worldcup26.ir live games (best for in-play minute/score)
-  try{ const g=await fetchJSON(SOURCES.wc26_games); if(applyWc26Games(g)>0) live=true; }
-  catch(e){ /* ignore */ }
+  // 2) worldcup26.ir live games — only as a FALLBACK. When the authoritative
+  //    proxy/openfootball feed already gave live data, skip it so it can't
+  //    overwrite the official minute/score with a laggier value. On the keyless
+  //    public path (no proxy) it stays the in-play source.
+  if(!live || PROXY===null){
+    try{ const g=await fetchJSON(SOURCES.wc26_games); if(applyWc26Games(g)>0) live=true; }
+    catch(e){ /* ignore */ }
+  }
 
   refreshStatuses();
   recomputeStandings();
@@ -1411,15 +1421,21 @@ async function liveTick(){
   refreshStatuses();
   const live = MODEL.matches.some(m=>m.status==="live");
   if(live && !document.hidden){
-    // let any open live-match page re-pull its (server-cached) statistics too
-    MODEL.matches.forEach(m=>{ if(m.status==="live") m._detail=undefined; });
+    // if the user is ON a live match page, let its (server-cached) stats refresh too
+    const cur=parseHash();
+    if(cur.route==="match"){
+      const vm=MODEL.matches.find(x=>String(x.id)===cur.arg);
+      if(vm && vm.status==="live") vm._detail=undefined;
+    }
     try{ await loadData(); }catch(e){}
   } else if(!live){
     setSource(MODEL.source||"snapshot"); // keep the LIVE chip honest
   }
-  liveTimer=setTimeout(liveTick, live?60000:120000);
+  // 30s while live (server also polls ~30s, so the minute stays close to real),
+  // 2 min otherwise just to notice a kickoff.
+  liveTimer=setTimeout(liveTick, live?30000:120000);
 }
-function startLivePolling(){ clearTimeout(liveTimer); liveTimer=setTimeout(liveTick, 60000); }
+function startLivePolling(){ clearTimeout(liveTimer); liveTimer=setTimeout(liveTick, 30000); }
 
 /* ---------- boot ---------- */
 function boot(){

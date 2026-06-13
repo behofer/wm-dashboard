@@ -220,7 +220,10 @@ function normalize(apiFootball) {
       team1: { name: (teams.home && teams.home.name) || '', id: teams.home && teams.home.id },
       team2: { name: (teams.away && teams.away.name) || '', id: teams.away && teams.away.id },
       status,
-      minute: (fx.status && fx.status.elapsed) || null,
+      // raw period so the frontend can show "Half-time" instead of a frozen "45'"
+      phase: st,
+      // elapsed can legitimately be 0 at a half's start — don't coerce that to null
+      minute: (fx.status && fx.status.elapsed != null) ? fx.status.elapsed : null,
       venue: (fx.venue && (fx.venue.name || '')) || '',
       score: {},
     };
