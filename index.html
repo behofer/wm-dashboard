@@ -251,6 +251,7 @@
       <li><a href="#/matches" data-route="matches" data-i18n="navMatches">Matches</a></li>
       <li><a href="#/rounds" data-route="rounds"   data-i18n="navRounds">Rounds</a></li>
       <li><a href="#/teams"  data-route="teams"    data-i18n="navTeams">Teams</a></li>
+      <li><a href="#/info"   data-route="info"     data-i18n="navInfo">Info</a></li>
     </ul>
   </div>
 </nav>
@@ -261,6 +262,13 @@
 <main id="main" class="wrap" tabindex="-1">
   <!-- routed content is rendered here -->
 </main>
+
+<footer class="app">
+  <div class="wrap">
+    <p style="margin:.2em 0" data-i18n="footerCopyright">© 2026 Benjamin Hofer</p>
+    <p style="margin:.2em 0" data-i18n="footerA11y">FIFA World Cup 2026 dashboard, built for full screen-reader accessibility in English and German.</p>
+  </div>
+</footer>
 
 <!-- DATA ROUTING
      When this file is served over http(s) — i.e. hosted via server.js — the
@@ -291,8 +299,14 @@ const I18N = {
     manualHint:"Manual updates only — press \u201cRefresh live scores\u201d to fetch the latest.",
     refreshing:"Refreshing live scores\u2026",
     refreshedLive:"Updated with live data.", refreshedSnapshot:"No live data available right now. Showing the verified snapshot.",
-    navNow:"Now", navGroups:"Groups", navMatches:"Matches", navTeams:"Teams", navAbout:"About & data",
+    navNow:"Now", navGroups:"Groups", navMatches:"Matches", navTeams:"Teams", navInfo:"Info", navAbout:"About & data",
     footerBuilt:"Accessibility-first dashboard. Built with semantic HTML, ARIA landmarks, managed focus and live regions.",
+    footerCopyright:"© 2026 Benjamin Hofer",
+    footerA11y:"FIFA World Cup 2026 dashboard, built for full screen-reader accessibility in English and German.",
+    infoTitle:"About this dashboard", infoLede:"What this is — in short.",
+    infoP1:"An accessible dashboard for the FIFA World Cup 2026, co-hosted by the USA, Canada and Mexico from 11 June to 19 July 2026.",
+    infoP2:"It is built screen-reader-first to WCAG 2.1 AA practices: semantic landmarks, a logical heading order, full keyboard operation, visible focus rings and polite live announcements when scores or views change. No meaning is carried by colour alone.",
+    infoP3:"Follow the live match, group tables, the full schedule, knockout rounds, teams and squads. Everything works in English and German — switch language any time — and all kick-off times are shown in your own time zone.",
     srcLive:"Live data connected", srcSnapshot:"Offline snapshot (verified)", srcPartial:"Partial live data",
     homeTitle:"Now at the World Cup", homeLede:"The match being played right now, plus what is coming up next.",
     liveNow:"Live now", upNext:"Up next", recent:"Latest result", noLive:"No match is live at the moment.",
@@ -331,8 +345,14 @@ const I18N = {
     manualHint:"Nur manuelle Aktualisierung \u2013 \u201eLive-Ergebnisse aktualisieren\u201c dr\u00fccken, um die neuesten Daten zu laden.",
     refreshing:"Live-Ergebnisse werden aktualisiert\u2026",
     refreshedLive:"Mit Live-Daten aktualisiert.", refreshedSnapshot:"Derzeit keine Live-Daten verf\u00fcgbar. Es wird der gepr\u00fcfte Datenstand angezeigt.",
-    navNow:"Jetzt", navGroups:"Gruppen", navMatches:"Spiele", navTeams:"Mannschaften", navAbout:"Info & Daten",
+    navNow:"Jetzt", navGroups:"Gruppen", navMatches:"Spiele", navTeams:"Mannschaften", navInfo:"Info", navAbout:"Info & Daten",
     footerBuilt:"Barrierefreies Dashboard. Aufgebaut mit semantischem HTML, ARIA-Landmarks, gesteuertem Fokus und Live-Regionen.",
+    footerCopyright:"© 2026 Benjamin Hofer",
+    footerA11y:"FIFA-Weltmeisterschafts-Dashboard 2026, entwickelt für vollständige Screenreader-Barrierefreiheit in Deutsch und Englisch.",
+    infoTitle:"Über dieses Dashboard", infoLede:"Worum es geht – kurz erklärt.",
+    infoP1:"Ein barrierefreies Dashboard zur FIFA-Weltmeisterschaft 2026, ausgetragen von den USA, Kanada und Mexiko vom 11. Juni bis 19. Juli 2026.",
+    infoP2:"Es ist konsequent für Screenreader nach den WCAG-2.1-AA-Richtlinien gebaut: semantische Landmarks, eine logische Überschriftenstruktur, vollständige Tastaturbedienung, sichtbare Fokusrahmen und dezente Live-Ansagen, sobald sich Spielstände oder Ansichten ändern. Keine Information wird allein durch Farbe vermittelt.",
+    infoP3:"Verfolgen Sie das laufende Spiel, Gruppentabellen, den gesamten Spielplan, die K.-o.-Runden, Mannschaften und Kader. Alles funktioniert in Deutsch und Englisch – jederzeit umschaltbar – und alle Anstoßzeiten werden in Ihrer eigenen Zeitzone angezeigt.",
     srcLive:"Live-Daten verbunden", srcSnapshot:"Offline-Datenstand (geprüft)", srcPartial:"Teilweise Live-Daten",
     homeTitle:"Jetzt bei der WM", homeLede:"Das aktuell laufende Spiel sowie die nächsten Begegnungen.",
     liveNow:"Jetzt live", upNext:"Als Nächstes", recent:"Letztes Ergebnis", noLive:"Im Moment läuft kein Spiel.",
@@ -853,7 +873,7 @@ function setDocTitle(extra){
 
 function renderRoute(){
   const {route,arg}=parseHash();
-  const known=["home","groups","matches","rounds","teams","group","match","team","player"];
+  const known=["home","groups","matches","rounds","teams","info","group","match","team","player"];
   const r = known.includes(route)?route:"home";
   const navFor = r==="group"?"groups" : r==="match"?"matches" : (r==="team"||r==="player")?"teams" : r;
   setActiveNav(navFor);
@@ -865,6 +885,7 @@ function renderRoute(){
     case "rounds": viewRounds(); break;
     case "match": viewMatchDetail(arg); break;
     case "teams": viewTeams(); break;
+    case "info": viewInfo(); break;
     case "team": viewTeamDetail(arg); break;
     case "player": viewPlayerDetail(arg); break;
   }
@@ -1075,6 +1096,18 @@ function viewRounds(){
       </div>`;
   });
   main.innerHTML=html; wireGo();
+}
+
+/* ----- INFO / ABOUT (what this is — no data-source internals) ----- */
+function viewInfo(){
+  setDocTitle(t("navInfo"));
+  main.innerHTML=`<h2 class="view-title">${esc(t("infoTitle"))}</h2>
+    <p class="lede">${esc(t("infoLede"))}</p>
+    <div class="card">
+      <p style="margin:.2em 0 .9em">${esc(t("infoP1"))}</p>
+      <p style="margin:.9em 0">${esc(t("infoP2"))}</p>
+      <p style="margin:.9em 0 .2em">${esc(t("infoP3"))}</p>
+    </div>`;
 }
 
 function viewMatchDetail(id){
