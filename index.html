@@ -315,7 +315,8 @@ const I18N = {
     manualHint:"Manual updates only — press \u201cRefresh live scores\u201d to fetch the latest.",
     refreshing:"Refreshing live scores\u2026",
     refreshedLive:"Updated with live data.", refreshedSnapshot:"No live data available right now. Showing the verified snapshot.",
-    navNow:"Now", navGroups:"Groups", navMatches:"Matches", navTeams:"Teams", navInfo:"Info", navAbout:"About & data",
+    navNow:"Home", navGroups:"Groups", navMatches:"Matches", navTeams:"Teams", navInfo:"Info", navAbout:"About & data",
+    loadMore:"Show more",
     footerBuilt:"Accessibility-first dashboard. Built with semantic HTML, ARIA landmarks, managed focus and live regions.",
     footerCopyright:"© 2026 Benjamin Hofer",
     footerA11y:"FIFA World Cup 2026 dashboard, built for full screen-reader accessibility in English and German.",
@@ -362,7 +363,8 @@ const I18N = {
     manualHint:"Nur manuelle Aktualisierung \u2013 \u201eLive-Ergebnisse aktualisieren\u201c dr\u00fccken, um die neuesten Daten zu laden.",
     refreshing:"Live-Ergebnisse werden aktualisiert\u2026",
     refreshedLive:"Mit Live-Daten aktualisiert.", refreshedSnapshot:"Derzeit keine Live-Daten verf\u00fcgbar. Es wird der gepr\u00fcfte Datenstand angezeigt.",
-    navNow:"Jetzt", navGroups:"Gruppen", navMatches:"Spiele", navTeams:"Mannschaften", navInfo:"Info", navAbout:"Info & Daten",
+    navNow:"Startseite", navGroups:"Gruppen", navMatches:"Spiele", navTeams:"Mannschaften", navInfo:"Info", navAbout:"Info & Daten",
+    loadMore:"Mehr anzeigen",
     footerBuilt:"Barrierefreies Dashboard. Aufgebaut mit semantischem HTML, ARIA-Landmarks, gesteuertem Fokus und Live-Regionen.",
     footerCopyright:"© 2026 Benjamin Hofer",
     footerA11y:"FIFA-Weltmeisterschafts-Dashboard 2026, entwickelt für vollständige Screenreader-Barrierefreiheit in Deutsch und Englisch.",
@@ -922,9 +924,22 @@ function matchLine(m, opts={}){
   const st = statusLabel(m);
   return {sc,st};
 }
+/* Spoken "Team A 1 to 0 Team B" (or "Team A versus Team B" before kick-off).
+   Used as the accessible NAME of the score banners so a screen reader hears the
+   whole line as one heading, instead of stray fragments like "Live" then a team
+   then "1, 0" then the other team. */
+function spokenScore(m){
+  const de=STATE.lang==="de";
+  if(m.scoreA!=null && m.scoreB!=null)
+    return `${nameOf(m.a)} ${m.scoreA} ${de?"zu":"to"} ${m.scoreB} ${nameOf(m.b)}`;
+  return `${nameOf(m.a)} ${de?"gegen":"versus"} ${nameOf(m.b)}`;
+}
+const HOME_STEP=6; // how many extra matches each "Show more" reveals
 function viewHome(){
   setDocTitle(t("navNow"));
   refreshStatuses();
+  if(STATE.homeNextN==null) STATE.homeNextN=4;
+  if(STATE.homeRecentN==null) STATE.homeRecentN=8;
 
   let html = `
     <h2 class="view-title">${esc(t("homeTitle"))}</h2>
@@ -936,15 +951,19 @@ function viewHome(){
   if(live.length){
     const f=live[0];
     const {sc,st}=matchLine(f);
-    const scoreText = (f.scoreA!=null&&f.scoreB!=null)
-        ? `${nameOf(f.a)} ${f.scoreA}, ${nameOf(f.b)} ${f.scoreB}`
-        : `${nameOf(f.a)} ${STATE.lang==='de'?'gegen':'versus'} ${nameOf(f.b)}`;
+    // The heading itself carries the full, spoken summary, so a screen reader
+    // announces one clean line ("Live now: Czechia 1 to 0 South Africa, minute
+    // 30") instead of stray fragments. The visual score row is therefore hidden
+    // from assistive tech to avoid re-reading the same numbers.
+    const de=STATE.lang==="de";
+    const minutePart = f.minute!=null ? (de?`, ${f.minute}. Minute`:`, minute ${f.minute}`) : "";
+    const nowAria = `${t("liveNow")}: ${spokenScore(f)}${minutePart}`;
     html += `
       <section class="now" aria-labelledby="now-h">
-        <h3 id="now-h" class="eyebrow"><span class="pulse" aria-hidden="true"></span>${esc(t("liveNow"))}</h3>
-        <div class="score-row">
+        <h3 id="now-h" class="eyebrow" aria-label="${esc(nowAria)}"><span class="pulse" aria-hidden="true"></span>${esc(t("liveNow"))}</h3>
+        <div class="score-row" aria-hidden="true">
           <span class="teamname">${esc(nameOf(f.a))}</span>
-          <span class="score" aria-label="${esc(scoreText)}">${esc(sc)}</span>
+          <span class="score">${esc(sc)}</span>
           <span class="teamname">${esc(nameOf(f.b))}</span>
           <span class="badge live">${esc(st)}</span>
         </div>
@@ -967,25 +986,50 @@ function viewHome(){
     html += `<p class="note">${esc(t("noLive"))}</p>`;
   }
 
-  // up next (next 4 scheduled)
+  // up next (all upcoming scheduled, revealed in pages)
   const now=Date.now();
-  const next=MODEL.matches.filter(m=>m.status==="scheduled"&&m.utc&&new Date(m.utc).getTime()>=now)
-              .sort((a,b)=>new Date(a.utc)-new Date(b.utc)).slice(0,4);
-  if(next.length){
-    html += `<h3 class="sectiontitle">${esc(t("upNext"))}</h3><div class="stack">`+
-      next.map(m=>listMatchBtn(m)).join("")+`</div>`;
-  }
+  const nextAll=MODEL.matches.filter(m=>m.status==="scheduled"&&m.utc&&new Date(m.utc).getTime()>=now)
+              .sort((a,b)=>new Date(a.utc)-new Date(b.utc));
+  html += sectionWithMore("upNext", nextAll, STATE.homeNextN, "next");
 
-  // latest results (the 8 most recently finished matches)
-  const recent=MODEL.matches.filter(m=>m.status==="finished"&&m.utc)
-              .sort((a,b)=>new Date(b.utc)-new Date(a.utc)).slice(0,8);
-  if(recent.length){
-    html += `<h3 class="sectiontitle">${esc(t("recentResults"))}</h3><div class="stack">`+
-      recent.map(m=>listMatchBtn(m)).join("")+`</div>`;
-  }
+  // latest results (most recently finished, revealed in pages)
+  const recentAll=MODEL.matches.filter(m=>m.status==="finished"&&m.utc)
+              .sort((a,b)=>new Date(b.utc)-new Date(a.utc));
+  html += sectionWithMore("recentResults", recentAll, STATE.homeRecentN, "recent");
 
   main.innerHTML=html;
   wireGo();
+  wireMore();
+}
+
+/* A "stack" section that shows the first `shownN` matches plus a "Show more"
+   button when more remain. `key` ("next"/"recent") ties the button to the
+   counter it grows. */
+function sectionWithMore(titleKey, all, shownN, key){
+  if(!all.length) return "";
+  const shown=all.slice(0, shownN);
+  let h=`<h3 class="sectiontitle">${esc(t(titleKey))}</h3><div class="stack" id="stack-${key}">`+
+    shown.map(m=>listMatchBtn(m)).join("")+`</div>`;
+  if(all.length>shown.length){
+    h+=`<p><button class="btn" type="button" id="more-${key}" data-more="${key}" aria-label="${esc(t("loadMore"))}: ${esc(t(titleKey))}">${esc(t("loadMore"))}</button></p>`;
+  }
+  return h;
+}
+
+/* Wire the "Show more" buttons: grow the counter, re-render, then move focus to
+   the first newly revealed match so keyboard/screen-reader users land on it. */
+function wireMore(){
+  main.querySelectorAll("[data-more]").forEach(b=>b.addEventListener("click",()=>{
+    const key=b.getAttribute("data-more");
+    const stack=document.getElementById("stack-"+key);
+    const prev=stack?stack.children.length:0;
+    if(key==="next") STATE.homeNextN+=HOME_STEP; else STATE.homeRecentN+=HOME_STEP;
+    viewHome();
+    const ns=document.getElementById("stack-"+key);
+    const target=ns && (ns.children[prev]||ns.lastElementChild);
+    if(target && target.focus) target.focus();
+    else { const mb=document.getElementById("more-"+key); if(mb) mb.focus(); }
+  }));
 }
 
 function tvBlock(m){
@@ -1167,15 +1211,17 @@ function viewMatchDetail(id){
   refreshStatuses();
   const sc=(m.scoreA!=null&&m.scoreB!=null)?`${m.scoreA}–${m.scoreB}`:"—";
   const st=statusLabel(m);
-  const scoreText=(m.scoreA!=null)?`${nameOf(m.a)} ${m.scoreA}, ${nameOf(m.b)} ${m.scoreB}`:`${nameOf(m.a)} – ${nameOf(m.b)}`;
+  // Descriptive heading carries the full spoken result; the big number itself is
+  // hidden from screen readers (the team buttons stay readable for navigation).
+  const headAria=`${st}: ${spokenScore(m)}`;
   let html=`
     <p class="backbtn"><button class="btn" type="button" data-go="matches">‹ ${esc(t("backMatches"))}</button></p>
     <h2 class="view-title">${esc(t("matchStatsTitle"))}</h2>
     <section class="now" aria-labelledby="m-h">
-      <h3 id="m-h" class="eyebrow">${m.status==='live'?'<span class="pulse" aria-hidden="true"></span>':''}${esc(st)}</h3>
+      <h3 id="m-h" class="eyebrow" aria-label="${esc(headAria)}">${m.status==='live'?'<span class="pulse" aria-hidden="true"></span>':''}${esc(st)}</h3>
       <div class="score-row">
         <span class="teamname"><button class="btn btn-ghost" type="button" data-go="team/${m.a}">${esc(nameOf(m.a))}</button></span>
-        <span class="score" aria-label="${esc(scoreText)}">${esc(sc)}</span>
+        <span class="score" aria-hidden="true">${esc(sc)}</span>
         <span class="teamname"><button class="btn btn-ghost" type="button" data-go="team/${m.b}">${esc(nameOf(m.b))}</button></span>
       </div>
     </section>
