@@ -24,6 +24,7 @@
     --accent-ink:#04231a;
     --focus:#ffd54a;         /* high-contrast focus ring */
     --live:#ff6b86;          /* live pulse */
+    --warn:#ffce4a;          /* yellow-card accent */
     --link:#a6d8ff;
     --shadow:0 10px 30px rgba(0,0,0,.35);
     --radius:14px;
@@ -35,20 +36,20 @@
     :root{
       --bg:#eef2f9; --bg-raised:#ffffff; --bg-card:#ffffff; --line:#b9c5db;
       --text:#0c1424; --text-dim:#2b3950; --text-muted:#4d5c78;
-      --accent:#0a7d52; --accent-ink:#ffffff; --focus:#7a4600; --live:#bf1638; --link:#0a5fae;
+      --accent:#0a7d52; --accent-ink:#ffffff; --focus:#7a4600; --live:#bf1638; --warn:#8a5a00; --link:#0a5fae;
       --shadow:0 8px 24px rgba(20,40,80,.10);
     }
   }
   :root[data-theme="dark"]{
     --bg:#0a111f; --bg-raised:#121d33; --bg-card:#16233c; --line:#33476b;
     --text:#f6f9ff; --text-dim:#cdd8ec; --text-muted:#9fb0cd;
-    --accent:#3ef0aa; --accent-ink:#04231a; --focus:#ffd54a; --live:#ff6b86; --link:#a6d8ff;
+    --accent:#3ef0aa; --accent-ink:#04231a; --focus:#ffd54a; --live:#ff6b86; --warn:#ffce4a; --link:#a6d8ff;
     --shadow:0 10px 30px rgba(0,0,0,.35);
   }
   :root[data-theme="light"]{
     --bg:#eef2f9; --bg-raised:#ffffff; --bg-card:#ffffff; --line:#b9c5db;
     --text:#0c1424; --text-dim:#2b3950; --text-muted:#4d5c78;
-    --accent:#0a7d52; --accent-ink:#ffffff; --focus:#7a4600; --live:#bf1638; --link:#0a5fae;
+    --accent:#0a7d52; --accent-ink:#ffffff; --focus:#7a4600; --live:#bf1638; --warn:#8a5a00; --link:#0a5fae;
     --shadow:0 8px 24px rgba(20,40,80,.10);
   }
   /* Honour OS "increase contrast": firm up borders + mute text toward full contrast */
@@ -150,6 +151,21 @@
   .badge{ display:inline-block; padding:3px 9px; border-radius:8px; border:1px solid var(--line); background:var(--bg-raised); font-size:.82rem; font-weight:700; }
   .badge.live{ color:var(--live); border-color:var(--live); }
   .badge.up{ color:var(--accent); border-color:var(--accent); }
+
+  /* Match-event chips: a coloured label PLUS a real word, so screen readers
+     announce "Goal"/"Yellow card"/"Red card"/"Substitution" (never an emoji),
+     while sighted users still get an at-a-glance icon. Colour is decorative
+     only — the word always carries the meaning. */
+  ul.events{ list-style:none; padding:0; margin:0; }
+  li.ev{ display:flex; align-items:baseline; gap:8px; padding:7px 0; border-bottom:1px solid var(--line); }
+  li.ev:last-child{ border-bottom:0; }
+  .ev-min{ min-width:2.6em; font-variant-numeric:tabular-nums; font-weight:700; color:var(--text-dim); }
+  .ev-tag{ display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:999px; border:1px solid var(--line); background:var(--bg-raised); font-size:.8rem; font-weight:700; white-space:nowrap; }
+  .ev-tag .ev-ico{ font-size:.95em; line-height:1; }
+  .ev-goal{ color:var(--accent); border-color:var(--accent); }
+  .ev-red{ color:var(--live); border-color:var(--live); }
+  .ev-yellow{ color:var(--warn); border-color:var(--warn); }
+  .ev-sub{ color:var(--text-dim); }
 
   /* buttons that act as links to detail */
   .listbtn{
@@ -305,11 +321,12 @@ const I18N = {
     footerA11y:"FIFA World Cup 2026 dashboard, built for full screen-reader accessibility in English and German.",
     infoTitle:"About this dashboard", infoLede:"What this is — in short.",
     infoP1:"An accessible dashboard for the FIFA World Cup 2026, co-hosted by the USA, Canada and Mexico from 11 June to 19 July 2026.",
-    infoP2:"It is built screen-reader-first to WCAG 2.1 AA practices: semantic landmarks, a logical heading order, full keyboard operation, visible focus rings and polite live announcements when scores or views change. No meaning is carried by colour alone.",
+    infoP2:"It is built screen-reader-first: semantic landmarks, a logical heading order, full keyboard operation, visible focus rings and polite live announcements when scores or views change. No meaning is carried by colour alone.",
     infoP3:"Follow the live match, group tables, the full schedule, knockout rounds, teams and squads. Everything works in English and German — switch language any time — and all kick-off times are shown in your own time zone.",
     srcLive:"Live data connected", srcSnapshot:"Offline snapshot (verified)", srcPartial:"Partial live data",
     homeTitle:"Now at the World Cup", homeLede:"The match being played right now, plus what is coming up next.",
-    liveNow:"Live now", upNext:"Up next", recent:"Latest result", noLive:"No match is live at the moment.",
+    liveNow:"Live now", upNext:"Up next", recent:"Latest result", recentResults:"Latest results", noLive:"No match is live at the moment.",
+    koStage:"Knockout stage", matchesWord:"matches", evGoal:"Goal", evYellow:"Yellow card", evRed:"Red card", evSub:"Substitution",
     minute:"minute", ft:"Full time", ht:"Half time", scheduled:"Scheduled", finished:"Finished", live:"Live",
     kickoff:"Kick-off", venue:"Venue", group:"Group", stage:"Stage", tv:"TV (Germany)",
     openMatch:"Open full match statistics", viewGroup:"Open group", viewTeam:"Open team", openPlayer:"Open player profile",
@@ -351,11 +368,12 @@ const I18N = {
     footerA11y:"FIFA-Weltmeisterschafts-Dashboard 2026, entwickelt für vollständige Screenreader-Barrierefreiheit in Deutsch und Englisch.",
     infoTitle:"Über dieses Dashboard", infoLede:"Worum es geht – kurz erklärt.",
     infoP1:"Ein barrierefreies Dashboard zur FIFA-Weltmeisterschaft 2026, ausgetragen von den USA, Kanada und Mexiko vom 11. Juni bis 19. Juli 2026.",
-    infoP2:"Es ist konsequent für Screenreader nach den WCAG-2.1-AA-Richtlinien gebaut: semantische Landmarks, eine logische Überschriftenstruktur, vollständige Tastaturbedienung, sichtbare Fokusrahmen und dezente Live-Ansagen, sobald sich Spielstände oder Ansichten ändern. Keine Information wird allein durch Farbe vermittelt.",
+    infoP2:"Es ist konsequent für Screenreader gebaut: semantische Landmarks, eine logische Überschriftenstruktur, vollständige Tastaturbedienung, sichtbare Fokusrahmen und dezente Live-Ansagen, sobald sich Spielstände oder Ansichten ändern. Keine Information wird allein durch Farbe vermittelt.",
     infoP3:"Verfolgen Sie das laufende Spiel, Gruppentabellen, den gesamten Spielplan, die K.-o.-Runden, Mannschaften und Kader. Alles funktioniert in Deutsch und Englisch – jederzeit umschaltbar – und alle Anstoßzeiten werden in Ihrer eigenen Zeitzone angezeigt.",
     srcLive:"Live-Daten verbunden", srcSnapshot:"Offline-Datenstand (geprüft)", srcPartial:"Teilweise Live-Daten",
     homeTitle:"Jetzt bei der WM", homeLede:"Das aktuell laufende Spiel sowie die nächsten Begegnungen.",
-    liveNow:"Jetzt live", upNext:"Als Nächstes", recent:"Letztes Ergebnis", noLive:"Im Moment läuft kein Spiel.",
+    liveNow:"Jetzt live", upNext:"Als Nächstes", recent:"Letztes Ergebnis", recentResults:"Letzte Spiele", noLive:"Im Moment läuft kein Spiel.",
+    koStage:"Endrunde", matchesWord:"Spiele", evGoal:"Tor", evYellow:"Gelbe Karte", evRed:"Rote Karte", evSub:"Wechsel",
     minute:"Minute", ft:"Endstand", ht:"Halbzeit", scheduled:"Angesetzt", finished:"Beendet", live:"Live",
     kickoff:"Anstoß", venue:"Spielort", group:"Gruppe", stage:"Phase", tv:"TV (Deutschland)",
     openMatch:"Vollständige Spielstatistik öffnen", viewGroup:"Gruppe öffnen", viewTeam:"Mannschaft öffnen", openPlayer:"Spielerprofil öffnen",
@@ -548,17 +566,23 @@ function statusLabel(m){
   return t("scheduled");
 }
 
+/* The viewer's own IANA time zone, resolved from the browser at runtime (e.g.
+   "Europe/Berlin"). Every kick-off is converted from its UTC instant into THIS
+   zone, so times are always the user's local time — never the server's. */
+const BROWSER_TZ = (()=>{ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; }catch(e){ return undefined; } })();
+
 /* Kick-off shown in the VIEWER's own time zone (correct for everyone, and the
-   same text feeds screen readers). Falls back to the human local string, then
-   to a "date to be confirmed" label. */
-function kickoffText(m){
+   same text feeds screen readers). Returns null when no UTC instant is known. */
+function kickoffText(m, withZone){
   // Always render from the UTC instant into the viewer's own zone — never the
   // bundled venue-local string, so every time shown is the user's regional time.
   if(m.utc){
     const d=new Date(m.utc);
     if(!isNaN(d.getTime())){
-      return d.toLocaleString(STATE.lang==="de"?"de-DE":"en-GB",
-        {weekday:"short",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
+      const s=d.toLocaleString(STATE.lang==="de"?"de-DE":"en-GB",
+        {weekday:"short",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit",timeZone:BROWSER_TZ});
+      const z=withZone?tzLabel():"";
+      return z ? `${s} ${z}` : s;
     }
   }
   return null;
@@ -576,7 +600,7 @@ function fmtDate(iso){
    in the global "all times in your time zone" hint. */
 function tzLabel(){
   try{
-    const parts=new Intl.DateTimeFormat(STATE.lang==="de"?"de-DE":"en-GB",{timeZoneName:"short"}).formatToParts(new Date());
+    const parts=new Intl.DateTimeFormat(STATE.lang==="de"?"de-DE":"en-GB",{timeZoneName:"short",timeZone:BROWSER_TZ}).formatToParts(new Date());
     const z=parts.find(p=>p.type==="timeZoneName");
     return z?z.value:"";
   }catch(e){ return ""; }
@@ -735,7 +759,7 @@ function goalEvents(list, teamCode){
   return list.filter(Boolean).map(go=>{
     const who = (go && (go.name||go.player)) || String(go);
     const minute = (go && (go.minute||go.min)) || "";
-    return { minute:String(minute), text:"⚽ "+who+" ("+nameOf(teamCode)+")" };
+    return { minute:String(minute), type:"goal", text:who+" ("+nameOf(teamCode)+")" };
   });
 }
 
@@ -796,7 +820,7 @@ function wcScorerEvents(raw, teamCode){
     const mm=/(\d{1,3})\s*$/.exec(name);
     const minute=mm?mm[1]:"";
     const who=mm?name.slice(0,mm.index).trim():name;
-    return { minute, text:"⚽ "+who+" ("+nameOf(teamCode)+")" };
+    return { minute, type:"goal", text:who+" ("+nameOf(teamCode)+")" };
   }).filter(Boolean);
 }
 
@@ -900,53 +924,66 @@ function matchLine(m, opts={}){
 }
 function viewHome(){
   setDocTitle(t("navNow"));
-  const f=featuredMatch();
   refreshStatuses();
-  const {sc,st}=matchLine(f);
-  const isLive=f.status==="live";
-  const eyebrow = isLive? t("liveNow") : (f.status==="scheduled"? t("upNext") : t("recent"));
-  const scoreText = (f.scoreA!=null&&f.scoreB!=null)
-      ? `${nameOf(f.a)} ${f.scoreA}, ${nameOf(f.b)} ${f.scoreB}`
-      : `${nameOf(f.a)} ${STATE.lang==='de'?'gegen':'versus'} ${nameOf(f.b)}`;
 
   let html = `
     <h2 class="view-title">${esc(t("homeTitle"))}</h2>
-    <p class="lede">${esc(t("homeLede"))}</p>
-    <section class="now" aria-labelledby="now-h">
-      <h3 id="now-h" class="eyebrow">${isLive?'<span class="pulse" aria-hidden="true"></span>':''}${esc(eyebrow)}</h3>
-      <div class="score-row">
-        <span class="teamname">${esc(nameOf(f.a))}</span>
-        <span class="score" aria-label="${esc(scoreText)}">${esc(sc)}</span>
-        <span class="teamname">${esc(nameOf(f.b))}</span>
-        <span class="badge ${isLive?'live':(f.status==='scheduled'?'up':'')}">${esc(st)}</span>
-      </div>
-      <p class="meta">
-        ${esc(t("group"))} ${esc(f.group)}${f.venue?` · ${esc(f.venue)}`:""}${kickoffText(f)?` · ${esc(kickoffText(f))}`:""}
-      </p>
-      ${tvBlock(f)}
-      <p style="margin-top:14px">
-        <button class="btn btn-accent" type="button" data-go="match/${esc(f.id)}">${esc(t("openMatch"))}</button>
-      </p>
-    </section>
-  `;
+    <p class="lede">${esc(t("homeLede"))}</p>`;
 
-  // live list (other live matches)
-  const liveOthers=MODEL.matches.filter(m=>m.status==="live"&&m.id!==f.id);
-  if(liveOthers.length){
-    html += `<h3 class="sectiontitle">${esc(t("liveNow"))}</h3><div class="stack">`+
-      liveOthers.map(m=>listMatchBtn(m)).join("")+`</div>`;
-  } else if(f.status!=="live"){
+  // The big "now" banner is only shown while a match is ACTUALLY live.
+  const live = MODEL.matches.filter(m=>m.status==="live")
+                .sort((a,b)=>new Date(a.utc||0)-new Date(b.utc||0));
+  if(live.length){
+    const f=live[0];
+    const {sc,st}=matchLine(f);
+    const scoreText = (f.scoreA!=null&&f.scoreB!=null)
+        ? `${nameOf(f.a)} ${f.scoreA}, ${nameOf(f.b)} ${f.scoreB}`
+        : `${nameOf(f.a)} ${STATE.lang==='de'?'gegen':'versus'} ${nameOf(f.b)}`;
+    html += `
+      <section class="now" aria-labelledby="now-h">
+        <h3 id="now-h" class="eyebrow"><span class="pulse" aria-hidden="true"></span>${esc(t("liveNow"))}</h3>
+        <div class="score-row">
+          <span class="teamname">${esc(nameOf(f.a))}</span>
+          <span class="score" aria-label="${esc(scoreText)}">${esc(sc)}</span>
+          <span class="teamname">${esc(nameOf(f.b))}</span>
+          <span class="badge live">${esc(st)}</span>
+        </div>
+        <p class="meta">
+          ${esc(t("group"))} ${esc(f.group)}${f.venue?` · ${esc(f.venue)}`:""}${kickoffText(f,true)?` · ${esc(kickoffText(f,true))}`:""}
+        </p>
+        ${tvBlock(f)}
+        <p style="margin-top:14px">
+          <button class="btn btn-accent" type="button" data-go="match/${esc(f.id)}">${esc(t("openMatch"))}</button>
+        </p>
+      </section>`;
+
+    // any other live matches
+    const liveOthers=live.slice(1);
+    if(liveOthers.length){
+      html += `<h3 class="sectiontitle">${esc(t("liveNow"))}</h3><div class="stack">`+
+        liveOthers.map(m=>listMatchBtn(m)).join("")+`</div>`;
+    }
+  } else {
     html += `<p class="note">${esc(t("noLive"))}</p>`;
   }
 
   // up next (next 4 scheduled)
   const now=Date.now();
-  const next=MODEL.matches.filter(m=>m.status==="scheduled"&&m.utc&&new Date(m.utc).getTime()>=now&&m.id!==f.id)
+  const next=MODEL.matches.filter(m=>m.status==="scheduled"&&m.utc&&new Date(m.utc).getTime()>=now)
               .sort((a,b)=>new Date(a.utc)-new Date(b.utc)).slice(0,4);
   if(next.length){
     html += `<h3 class="sectiontitle">${esc(t("upNext"))}</h3><div class="stack">`+
       next.map(m=>listMatchBtn(m)).join("")+`</div>`;
   }
+
+  // latest results (the 8 most recently finished matches)
+  const recent=MODEL.matches.filter(m=>m.status==="finished"&&m.utc)
+              .sort((a,b)=>new Date(b.utc)-new Date(a.utc)).slice(0,8);
+  if(recent.length){
+    html += `<h3 class="sectiontitle">${esc(t("recentResults"))}</h3><div class="stack">`+
+      recent.map(m=>listMatchBtn(m)).join("")+`</div>`;
+  }
+
   main.innerHTML=html;
   wireGo();
 }
@@ -1054,22 +1091,36 @@ function viewGroupDetail(g){
 }
 
 /* ----- MATCHES ----- */
+const KO_TOTAL = 32; // round of 32 (16) + r16 (8) + qf (4) + sf (2) + 3rd (1) + final (1)
 function viewMatches(){
   setDocTitle(t("navMatches"));
   let html=`<h2 class="view-title">${esc(t("matchesTitle"))}</h2><p class="lede">${esc(t("matchesLede"))}</p>`;
-  // group stage only here (knockout games live in the Rounds view)
-  const timed=MODEL.matches.filter(m=>m.stage==="group"&&m.utc);
-  const untimed=MODEL.matches.filter(m=>m.stage==="group"&&!m.utc);
+
+  // ---- Group stage ----
+  const group=MODEL.matches.filter(m=>m.stage==="group");
+  const gsPlayed=group.filter(m=>m.scoreA!=null).length;
+  html+=`<h3 class="sectiontitle">${esc(t("groupStage"))} <span class="muted">(${gsPlayed}/${group.length} ${esc(t("matchesWord"))})</span></h3>`;
+  const timed=group.filter(m=>m.utc);
+  const untimed=group.filter(m=>!m.utc);
   if(timed.length){ html+=`<div class="stack">${timed.map(m=>listMatchBtn(m)).join("")}</div>`; }
   if(untimed.length){
-    html+=`<h3 class="sectiontitle">${esc(t("matchday"))} 2–3 · <span class="muted">${esc(t("tbd"))}</span></h3>`;
+    html+=`<h4 style="margin:1em 0 .3em">${esc(t("matchday"))} 2–3 · <span class="muted">${esc(t("tbd"))}</span></h4>`;
     // group them by group letter for scanability
     GROUPS.forEach(g=>{
       const gm=untimed.filter(m=>m.group===g);
       if(!gm.length) return;
-      html+=`<h4 style="margin:1em 0 .3em">${esc(t("group"))} ${g}</h4><div class="stack">${gm.map(m=>listMatchBtn(m)).join("")}</div>`;
+      html+=`<h5 style="margin:.8em 0 .3em">${esc(t("group"))} ${g}</h5><div class="stack">${gm.map(m=>listMatchBtn(m)).join("")}</div>`;
     });
   }
+
+  // ---- Knockout stage ----
+  const ko=MODEL.matches.filter(m=>m.stage&&m.stage!=="group").sort((a,b)=>new Date(a.utc||0)-new Date(b.utc||0));
+  const koPlayed=ko.filter(m=>m.scoreA!=null).length;
+  html+=`<h3 class="sectiontitle">${esc(t("koStage"))} <span class="muted">(${koPlayed}/${KO_TOTAL} ${esc(t("matchesWord"))})</span></h3>`;
+  html+= ko.length
+    ? `<div class="stack">${ko.map(m=>listMatchBtn(m)).join("")}</div>`
+    : `<p class="note">${esc(t("koTbd"))}</p>`;
+
   main.innerHTML=html; wireGo();
 }
 
@@ -1131,14 +1182,14 @@ function viewMatchDetail(id){
     <h3 class="sectiontitle">${esc(t("matchInfo"))}</h3>
     <div class="card"><dl class="kv">
       <dt>${m.stage&&m.stage!=="group"?esc(t("stage")):esc(t("group"))}</dt><dd>${esc(m.stage&&m.stage!=="group"?stageLabel(m.stage):m.group)}</dd>
-      <dt>${esc(t("kickoff"))}</dt><dd>${kickoffText(m)?esc(kickoffText(m)):esc(t("tbd"))}</dd>
+      <dt>${esc(t("kickoff"))}</dt><dd>${kickoffText(m,true)?esc(kickoffText(m,true)):esc(t("tbd"))}</dd>
       <dt>${esc(t("venue"))}</dt><dd>${m.venue?esc(m.venue):esc(t("tbd"))}</dd>
       ${m.stage&&m.stage!=="group"?"":`<dt>${esc(t("matchday"))}</dt><dd>${m.md||"—"}</dd>`}
     </dl>
     ${STATE.lang==="de"?tvBlock(m):""}
     </div>
     <h3 class="sectiontitle">${esc(t("events"))}</h3>
-    ${m.events&&m.events.length? `<ul>${m.events.map(e=>`<li>${esc(e.minute||"")}' ${esc(e.text||"")}</li>`).join("")}</ul>` : `<p class="note">${esc(t("noEvents"))}</p>`}
+    ${m.events&&m.events.length? `<ul class="events">${m.events.map(eventLine).join("")}</ul>` : `<p class="note">${esc(t("noEvents"))}</p>`}
     <h3 class="sectiontitle">${esc(t("stats"))} · ${esc(t("lineups"))}</h3>
     ${matchExtrasHTML(m)}
   `;
@@ -1162,16 +1213,34 @@ const POS_DE = { Goalkeeper:"Torwart", Defender:"Abwehr", Midfielder:"Mittelfeld
 function statName(type){ return STATE.lang==="de" ? (STAT_DE[type]||type) : type; }
 function posName(p){ return STATE.lang==="de" ? (POS_DE[p]||p) : p; }
 
-function eventText(e){
-  const isRed=/red/i.test(e.detail||"");
-  const icon = e.type==="Goal" ? "⚽"
-    : e.type==="Card" ? (isRed?"🟥":"🟨")
-    : (/^subst/i.test(e.type||"")) ? "🔁" : "•";
+/* Classify a raw API-Football event into our chip vocabulary. */
+function evType(e){
+  if(e.type==="Goal") return "goal";
+  if(e.type==="Card") return /red/i.test(e.detail||"") ? "red" : "yellow";
+  if(/^subst/i.test(e.type||"")) return "sub";
+  return "other";
+}
+/* The spoken/visible description of an event WITHOUT any icon (the chip carries
+   the type label). */
+function eventPlain(e){
   const c=code(e.team); const team=c?nameOf(c):(e.team||"");
   let txt = e.player||"";
   if(e.type==="Goal" && e.assist) txt += ` (${t("assistLabel")}: ${e.assist})`;
   else if(/^subst/i.test(e.type||"") && e.assist) txt += ` ↔ ${e.assist}`;
-  return `${icon} ${txt}${team?` — ${team}`:""}`;
+  return `${txt}${team?` — ${team}`:""}`;
+}
+/* A coloured pill carrying a REAL word (read by screen readers) plus a decorative,
+   aria-hidden emoji for sighted users. Unknown types get no pill. */
+const EV_TAG={ goal:{c:"ev-goal",i:"⚽",k:"evGoal"}, yellow:{c:"ev-yellow",i:"🟨",k:"evYellow"},
+  red:{c:"ev-red",i:"🟥",k:"evRed"}, sub:{c:"ev-sub",i:"🔁",k:"evSub"} };
+function eventTag(type){
+  const e=EV_TAG[type]; if(!e) return "";
+  return `<span class="ev-tag ${e.c}"><span class="ev-ico" aria-hidden="true">${e.i}</span>${esc(t(e.k))}</span>`;
+}
+function eventLine(e){
+  const min = e.minute? `<span class="ev-min">${esc(e.minute)}'</span>` : `<span class="ev-min"></span>`;
+  const tag = eventTag(e.type);
+  return `<li class="ev">${min}${tag?tag+" ":""}<span>${esc(e.text||"")}</span></li>`;
 }
 
 function renderStatsTable(d, m){
@@ -1225,7 +1294,7 @@ async function ensureMatchDetail(m){
     const d=await fetchJSON(PROXY+"/fixture?id="+encodeURIComponent(m.fixtureId), 10000);
     m._detail = d || null;
     if(d && Array.isArray(d.events) && d.events.length){
-      m.events = d.events.map(e=>({minute:String(e.minute||""), text:eventText(e)}));
+      m.events = d.events.map(e=>({minute:String(e.minute||""), type:evType(e), text:eventPlain(e)}));
     }
   }catch(e){ m._detail=null; }
   const cur=parseHash();
