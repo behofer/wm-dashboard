@@ -190,6 +190,17 @@
   tbody tr:nth-child(odd){ background:color-mix(in srgb, var(--bg-card) 60%, transparent); }
   td.qual{ border-left:4px solid var(--accent); }
 
+  /* Single-match statistics: only 3 columns (stat · team A · team B), so it must
+     fit any phone width WITHOUT a horizontal scroll container. The wide table
+     min-width + the scroll wrapper + a sticky header was also what made mobile
+     screen readers drop out of the table after a few rows — so here we drop all
+     three: no min-width, no overflow scroller, no sticky header. */
+  .statstable{ overflow:visible; }
+  .statstable table{ min-width:0; }
+  .statstable th[scope="col"]{ position:static; }
+  .statstable th,.statstable td{ padding:10px 8px; }
+  .statstable th[scope="row"]{ white-space:normal; overflow-wrap:anywhere; }
+
   dl.kv{ display:grid; grid-template-columns:auto 1fr; gap:6px 16px; margin:0; }
   dl.kv dt{ color:var(--text-muted); }
   dl.kv dd{ margin:0; font-weight:600; }
@@ -197,9 +208,6 @@
   .backbtn{ margin-bottom:14px; }
   .sectiontitle{ font-size:1.1rem; margin:1.3em 0 .5em; border-bottom:1px solid var(--line); padding-bottom:6px; }
   .note{ background:var(--bg-raised); border:1px dashed var(--line); border-radius:10px; padding:12px 14px; color:var(--text-dim); font-size:.92rem; }
-  .tvlist{ list-style:none; margin:6px 0 0; padding:0; display:flex; flex-wrap:wrap; gap:8px; }
-  .tvlist li{ border:1px solid var(--line); border-radius:8px; padding:6px 10px; background:var(--bg-raised); font-weight:700; }
-  .tag-free{ color:var(--accent); }
   .muted{ color:var(--text-muted); }
   ol.squadlist{ list-style:none; padding-left:0; margin:0; columns:2; column-gap:28px; }
   ol.squadlist li{ break-inside:avoid; padding:4px 0; border-bottom:1px solid color-mix(in srgb,var(--line) 60%, transparent); }
@@ -329,7 +337,7 @@ const I18N = {
     liveNow:"Live now", upNext:"Up next", recent:"Latest result", recentResults:"Latest results", noLive:"No match is live at the moment.",
     koStage:"Knockout stage", matchesWord:"matches", evGoal:"Goal", evYellow:"Yellow card", evRed:"Red card", evSub:"Substitution",
     minute:"minute", ft:"Full time", ht:"Half time", scheduled:"Scheduled", finished:"Finished", live:"Live",
-    kickoff:"Kick-off", venue:"Venue", group:"Group", stage:"Stage", tv:"TV (Germany)",
+    kickoff:"Kick-off", venue:"Venue", group:"Group", stage:"Stage",
     openMatch:"Open full match statistics", viewGroup:"Open group", viewTeam:"Open team", openPlayer:"Open player profile",
     navRounds:"Rounds", roundsTitle:"Rounds & knockout stage", roundsLede:"The group stage runs 11–27 June 2026, then the knockout rounds. Knockout pairings are confirmed once the group stage ends.",
     groupStage:"Group stage", koTbd:"Teams confirmed after the group stage.", finalVenueLabel:"Venue",
@@ -351,7 +359,6 @@ const I18N = {
     aboutTitle:"About & data sources", finalLabel:"Final", thirdPlace:"Third-place play-off", semi:"Semi-final",
     matchday:"Matchday", tbd:"Date and venue from live source", allTeams:"team", showingSnapshot:"Showing verified bundled data.",
     goalAnnounce:"Score update", statusAnnounce:"Status update", loadingData:"Loading data…",
-    tvAll:"MagentaTV (all 104 matches live)", tvFree:"Free-to-air", tvNote:"In Germany, MagentaTV (Telekom) holds all live rights to every match; 44 are MagentaTV-exclusive. ARD and ZDF show 60 matches free-to-air, including every Germany match, the opening match, both semi-finals and the final.",
     perspectiveLocal:"local time", confName:{UEFA:"UEFA (Europe)",CONMEBOL:"CONMEBOL (South America)",CONCACAF:"CONCACAF (N. & C. America)",CAF:"CAF (Africa)",AFC:"AFC (Asia)",OFC:"OFC (Oceania)"}
   },
   de:{
@@ -377,7 +384,7 @@ const I18N = {
     liveNow:"Jetzt live", upNext:"Als Nächstes", recent:"Letztes Ergebnis", recentResults:"Letzte Spiele", noLive:"Im Moment läuft kein Spiel.",
     koStage:"Endrunde", matchesWord:"Spiele", evGoal:"Tor", evYellow:"Gelbe Karte", evRed:"Rote Karte", evSub:"Wechsel",
     minute:"Minute", ft:"Endstand", ht:"Halbzeit", scheduled:"Angesetzt", finished:"Beendet", live:"Live",
-    kickoff:"Anstoß", venue:"Spielort", group:"Gruppe", stage:"Phase", tv:"TV (Deutschland)",
+    kickoff:"Anstoß", venue:"Spielort", group:"Gruppe", stage:"Phase",
     openMatch:"Vollständige Spielstatistik öffnen", viewGroup:"Gruppe öffnen", viewTeam:"Mannschaft öffnen", openPlayer:"Spielerprofil öffnen",
     navRounds:"Runden", roundsTitle:"Runden & K.-o.-Phase", roundsLede:"Die Gruppenphase läuft vom 11.–27. Juni 2026, danach die K.-o.-Runden. Die Paarungen der K.-o.-Phase stehen nach Abschluss der Gruppenphase fest.",
     groupStage:"Gruppenphase", koTbd:"Mannschaften stehen nach der Gruppenphase fest.", finalVenueLabel:"Spielort",
@@ -399,8 +406,6 @@ const I18N = {
     aboutTitle:"Info & Datenquellen", finalLabel:"Finale", thirdPlace:"Spiel um Platz 3", semi:"Halbfinale",
     matchday:"Spieltag", tbd:"Datum und Spielort aus der Live-Quelle", allTeams:"Mannschaft", showingSnapshot:"Geprüfter Datenstand wird angezeigt.",
     goalAnnounce:"Spielstand aktualisiert", statusAnnounce:"Status aktualisiert", loadingData:"Daten werden geladen…",
-    tvAll:"MagentaTV (alle 104 Spiele live)", tvFree:"Frei empfangbar",
-    tvNote:"In Deutschland hält MagentaTV (Telekom) alle Live-Rechte an jedem Spiel; 44 Partien sind exklusiv bei MagentaTV. ARD und ZDF zeigen 60 Spiele frei empfangbar, darunter jedes Deutschland-Spiel, das Eröffnungsspiel, beide Halbfinals und das Finale.",
     perspectiveLocal:"Ortszeit", confName:{UEFA:"UEFA (Europa)",CONMEBOL:"CONMEBOL (Südamerika)",CONCACAF:"CONCACAF (Nord-/Mittelamerika)",CAF:"CAF (Afrika)",AFC:"AFC (Asien)",OFC:"OFC (Ozeanien)"}
   }
 };
@@ -443,8 +448,8 @@ function stageLabel(stage){
   return r ? (STATE.lang==="de"?r.de:r.en) : (STATE.lang==="de"?"Gruppenphase":"Group stage");
 }
 
-/* Confirmed fixtures (researched). kickoff = ISO UTC; local string shown to user.
-   tv.free lists confirmed free-to-air broadcasters. All matches also on MagentaTV. */
+/* Confirmed fixtures (researched). kickoff = ISO UTC, rendered in the viewer's
+   own zone. (freeTv is retained in the data but no longer surfaced in the UI.) */
 const CONFIRMED = [
   {a:"MEX",b:"RSA",utc:"2026-06-11T19:00:00Z",local:"Thu 11 Jun, 13:00 (Mexico City)",venue:"Estadio Azteca, Mexico City",md:1,opening:true,freeTv:["ZDF"]},
   {a:"KOR",b:"CZE",utc:"2026-06-12T02:00:00Z",local:"Thu 11 Jun, 20:00 (Guadalajara)",venue:"Estadio Akron, Guadalajara",md:1},
@@ -621,19 +626,6 @@ function featuredMatch(){
   // fallback: opening match
   return MODEL.matches.find(m=>m.opening) || MODEL.matches[0];
 }
-
-/* ---------- German TV resolver ---------- */
-function broadcasters(m){
-  const out=[{name:"MagentaTV", free:false, key:"all"}];
-  let free = (m.freeTv||[]).slice();
-  if(involvesGermany(m) && !free.length) free=["ARD/ZDF"];
-  if(m.opening && !free.includes("ZDF")) free.push("ZDF");
-  if(m.stage==="final" && !free.includes("ZDF")) free.push("ZDF");
-  if(m.stage==="semi" && !free.length) free.push("ARD/ZDF");
-  free.forEach(f=> out.push({name:f, free:true}));
-  return out;
-}
-function involvesGermany(m){ return m.a==="GER"||m.b==="GER"; }
 
 /* =====================================================================
    DATA PROVIDER — best-effort live overlay onto the verified snapshot.
@@ -970,7 +962,6 @@ function viewHome(){
         <p class="meta">
           ${esc(t("group"))} ${esc(f.group)}${f.venue?` · ${esc(f.venue)}`:""}${kickoffText(f,true)?` · ${esc(kickoffText(f,true))}`:""}
         </p>
-        ${tvBlock(f)}
         <p style="margin-top:14px">
           <button class="btn btn-accent" type="button" data-go="match/${esc(f.id)}">${esc(t("openMatch"))}</button>
         </p>
@@ -1030,13 +1021,6 @@ function wireMore(){
     if(target && target.focus) target.focus();
     else { const mb=document.getElementById("more-"+key); if(mb) mb.focus(); }
   }));
-}
-
-function tvBlock(m){
-  if(STATE.lang!=="de") return "";
-  const bs=broadcasters(m);
-  const items=bs.map(b=>`<li${b.free?' class="tag-free"':''}>${esc(b.name)}${b.free?` <span class="muted">(${esc(t("tvFree"))})</span>`:""}</li>`).join("");
-  return `<div style="margin-top:12px"><strong>${esc(t("tv"))}:</strong><ul class="tvlist">${items}</ul></div>`;
 }
 
 /* Context label: "Group A" for group games, the round name for knockout games. */
@@ -1232,7 +1216,6 @@ function viewMatchDetail(id){
       <dt>${esc(t("venue"))}</dt><dd>${m.venue?esc(m.venue):esc(t("tbd"))}</dd>
       ${m.stage&&m.stage!=="group"?"":`<dt>${esc(t("matchday"))}</dt><dd>${m.md||"—"}</dd>`}
     </dl>
-    ${STATE.lang==="de"?tvBlock(m):""}
     </div>
     <h3 class="sectiontitle">${esc(t("events"))}</h3>
     ${m.events&&m.events.length? `<ul class="events">${m.events.map(eventLine).join("")}</ul>` : `<p class="note">${esc(t("noEvents"))}</p>`}
@@ -1297,7 +1280,7 @@ function renderStatsTable(d, m){
     const av = aIsHome ? s.home : s.away, bv = aIsHome ? s.away : s.home;
     return `<tr><th scope="row" style="text-align:left">${esc(statName(s.type))}</th><td>${esc(val(av))}</td><td>${esc(val(bv))}</td></tr>`;
   }).join("");
-  return `<div class="tablewrap"><table>
+  return `<div class="tablewrap statstable"><table>
     <caption>${esc(t("stats"))}</caption>
     <thead><tr><th scope="col" style="text-align:left">${esc(t("stats"))}</th>
       <th scope="col">${esc(nameOf(m.a))}</th><th scope="col">${esc(nameOf(m.b))}</th></tr></thead>
