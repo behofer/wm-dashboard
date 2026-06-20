@@ -221,6 +221,37 @@
   .lineup-grid ol{ margin:.2em 0; padding-left:0; list-style:none; }
   .lineup-grid li{ padding:3px 0; }
   .lineup-grid h5{ margin:.7em 0 .2em; font-size:.9rem; }
+
+  /* Visual formation pitch — a clear at-a-glance plan for sighted users.
+     The pitch is purely decorative (aria-hidden); the equivalent ordered list
+     stays in the DOM as the screen-reader source of truth. Player numbers +
+     names carry the meaning, so nothing is conveyed by colour alone. */
+  .pitch{
+    --grass1:#22965a; --grass2:#1c8650; --pl:rgba(255,255,255,.55);
+    position:relative; width:100%; aspect-ratio:68/92; margin:.2em 0 .5em;
+    border-radius:12px; border:2px solid var(--pl); overflow:hidden;
+    background:repeating-linear-gradient(180deg,var(--grass1) 0 12.5%,var(--grass2) 12.5% 25%);
+  }
+  .pitch .pl{ position:absolute; border:2px solid var(--pl); pointer-events:none; }
+  .pitch .pl-mid{ left:0; right:0; top:0; height:0; border-width:2px 0 0 0; }
+  .pitch .pl-circle{ left:50%; top:0; width:32%; aspect-ratio:1; transform:translate(-50%,-50%); border-radius:50%; }
+  .pitch .pl-box{ left:16%; right:16%; bottom:0; height:22%; border-bottom:0; }
+  .pitch .pl-goal{ left:38%; right:38%; bottom:0; height:8%; border-bottom:0; }
+  .pitch .pp{
+    position:absolute; transform:translate(-50%,-50%);
+    display:flex; flex-direction:column; align-items:center; gap:3px; width:max-content; max-width:30%;
+  }
+  .pitch .pp-n{
+    width:30px; height:30px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--bg-card); color:var(--text); border:2px solid var(--text);
+    font-weight:800; font-size:.85rem; font-variant-numeric:tabular-nums; box-shadow:0 1px 4px rgba(0,0,0,.45);
+  }
+  .pitch .pp-name{
+    font-size:.7rem; font-weight:700; color:#fff; line-height:1.1; text-align:center; white-space:nowrap;
+    background:rgba(0,0,0,.5); padding:1px 6px; border-radius:6px; max-width:12ch; overflow:hidden; text-overflow:ellipsis;
+  }
+  @media (prefers-contrast: more){ .pitch{ --pl:#fff; } .pitch .pp-name{ background:#000; } }
   .sr-only{ position:absolute!important; width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0; }
   footer.app{ border-top:1px solid var(--line); color:var(--text-muted); font-size:.88rem; padding:18px 0 40px; }
   footer.app a{ color:var(--link); }
@@ -1286,16 +1317,55 @@ function renderStatsTable(d, m){
       <th scope="col">${esc(nameOf(m.a))}</th><th scope="col">${esc(nameOf(m.b))}</th></tr></thead>
     <tbody>${rows}</tbody></table></div>`;
 }
+/* Surname only, for the compact pitch labels (e.g. "O. Baumann" -> "Baumann").
+   The screen-reader list keeps the full feed name, so nothing is lost there. */
+function lastName(name){
+  const parts=String(name||"").trim().split(/\s+/);
+  return parts[parts.length-1]||"";
+}
+/* Draw the starting XI as a positioned formation graphic from each player's
+   API-Football `grid` ("row:col"). Row 1 is the goalkeeper line (own goal);
+   higher rows advance toward the opponent. Returns "" when there isn't enough
+   positional data — the caller then falls back to the plain list. The graphic
+   is aria-hidden: it duplicates the accessible list, so screen readers skip it. */
+function renderPitch(players){
+  const xi=(players||[]).filter(p=>p && typeof p.grid==="string" && /^\d+:\d+$/.test(p.grid));
+  if(xi.length<7) return "";
+  const rows={};
+  xi.forEach(p=>{ const x=parseInt(p.grid,10)||1; (rows[x]||(rows[x]=[])).push(p); });
+  const xs=Object.keys(rows).map(Number).sort((a,b)=>a-b);
+  const maxX=xs[xs.length-1];
+  const markers=xs.map(x=>{
+    const line=rows[x].slice().sort((a,b)=>(parseInt(a.grid.split(":")[1],10)||0)-(parseInt(b.grid.split(":")[1],10)||0));
+    const top= maxX>1 ? 92-((x-1)/(maxX-1))*84 : 50;
+    return line.map((p,i)=>{
+      const left=((i+1)/(line.length+1))*100;
+      return `<span class="pp" style="left:${left.toFixed(2)}%;top:${top.toFixed(2)}%">`+
+        `<span class="pp-n">${p.n!=null?esc(String(p.n)):""}</span>`+
+        `<span class="pp-name">${esc(lastName(p.name))}</span></span>`;
+    }).join("");
+  }).join("");
+  return `<div class="pitch" aria-hidden="true"><i class="pl pl-mid"></i><i class="pl pl-circle"></i>`+
+    `<i class="pl pl-box"></i><i class="pl pl-goal"></i>${markers}</div>`;
+}
 function renderLineupSide(c, ln){
   if(!ln) return "";
   const li=p=>`<li>${p.n!=null?`<span class="muted">${esc(String(p.n))}</span> `:""}${esc(p.name||"")}${p.pos?` <span class="muted">(${esc(posName(p.pos))})</span>`:""}</li>`;
-  const start=(ln.start||[]).map(li).join("");
-  const subs=(ln.subs||[]).map(li).join("");
+  const startArr=ln.start||[], subsArr=ln.subs||[];
+  const start=startArr.map(li).join("");
+  const subs=subsArr.map(li).join("");
   if(!start && !subs) return "";
   const title=(c?nameOf(c):ln.team||"")+(ln.formation?` · ${ln.formation}`:"");
+  const pitch=start?renderPitch(startArr):"";
+  // With positional data we show the visual pitch to sighted users and keep the
+  // ordered list as a screen-reader-only equivalent — both paths stay intact.
+  // Without it, the ordered list is shown to everyone (unchanged behaviour).
+  const startBlock = start
+    ? (pitch ? `${pitch}<ol class="sr-only">${start}</ol>` : `<ol>${start}</ol>`)
+    : "";
   return `<div class="card">
     <h4 style="margin:.1em 0 .4em">${esc(title)}</h4>
-    ${start?`<ol>${start}</ol>`:""}
+    ${startBlock}
     ${subs?`<h5 class="muted">${esc(t("subsTitle"))}</h5><ol>${subs}</ol>`:""}
   </div>`;
 }

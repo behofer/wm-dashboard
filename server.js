@@ -306,7 +306,7 @@ function normalizeDetail(stats, lineups, events) {
     const name = (tn.team && tn.team.name) || '';
     if (side === 'home' && !out.home) out.home = name;
     if (side === 'away' && !out.away) out.away = name;
-    const player = (x) => ({ n: x.player && x.player.number, name: x.player && x.player.name, pos: x.player && x.player.pos });
+    const player = (x) => ({ n: x.player && x.player.number, name: x.player && x.player.name, pos: x.player && x.player.pos, grid: (x.player && x.player.grid) || null });
     out.lineups[side] = {
       team: name,
       formation: tn.formation || '',

@@ -258,6 +258,13 @@ on purpose — the dashboard falls back to the snapshot and announces it.
 - Squad lists show the source's abbreviated names ("O. Baumann"); full first
   names + birth date + club are on the per-player page (`/player`). Enriching the
   whole list would cost one upstream call per player — deliberately avoided.
+- Line-ups render a **visual formation pitch** for sighted users plus the
+  semantic ordered list (kept as the `sr-only` screen-reader equivalent) — both
+  paths intentionally coexist; the pitch is `aria-hidden`. The pitch is drawn
+  from each starter's API-Football `grid` ("row:col", row 1 = goalkeeper). The
+  proxy must forward `grid` (it does, in `normalizeDetail`); when grid data is
+  missing (fewer than 7 positioned players), `renderPitch()` returns "" and the
+  ordered list is shown to everyone — the prior behaviour.
 - Daily budget is ~7,500 upstream requests. The server poller spends roughly
   1,500–3,000/day (adaptive); on-demand detail/squad/player calls are id-bounded
   and cached. Client polls hit only the warm server cache, never upstream.
