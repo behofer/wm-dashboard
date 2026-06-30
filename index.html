@@ -368,6 +368,8 @@ const I18N = {
     liveNow:"Live now", upNext:"Up next", recent:"Latest result", recentResults:"Latest results", noLive:"No match is live at the moment.",
     koStage:"Knockout stage", matchesWord:"matches", evGoal:"Goal", evYellow:"Yellow card", evRed:"Red card", evSub:"Substitution",
     minute:"minute", ft:"Full time", ht:"Half time", scheduled:"Scheduled", finished:"Finished", live:"Live",
+    penShort:"pen.", aetShort:"a.e.t.", decidedBy:"Result", decPen:"Penalty shootout", decAet:"After extra time",
+    spokenPen:"on penalties", spokenAet:"after extra time",
     kickoff:"Kick-off", venue:"Venue", group:"Group", stage:"Stage",
     openMatch:"Open full match statistics", viewGroup:"Open group", viewTeam:"Open team", openPlayer:"Open player profile",
     navRounds:"Rounds", roundsTitle:"Rounds & knockout stage", roundsLede:"The group stage runs 11–27 June 2026, then the knockout rounds. Knockout pairings are confirmed once the group stage ends.",
@@ -415,6 +417,8 @@ const I18N = {
     liveNow:"Jetzt live", upNext:"Als Nächstes", recent:"Letztes Ergebnis", recentResults:"Letzte Spiele", noLive:"Im Moment läuft kein Spiel.",
     koStage:"Endrunde", matchesWord:"Spiele", evGoal:"Tor", evYellow:"Gelbe Karte", evRed:"Rote Karte", evSub:"Wechsel",
     minute:"Minute", ft:"Endstand", ht:"Halbzeit", scheduled:"Angesetzt", finished:"Beendet", live:"Live",
+    penShort:"i.E.", aetShort:"n.V.", decidedBy:"Ergebnis", decPen:"Elfmeterschießen", decAet:"Nach Verlängerung",
+    spokenPen:"im Elfmeterschießen", spokenAet:"nach Verlängerung",
     kickoff:"Anstoß", venue:"Spielort", group:"Gruppe", stage:"Phase",
     openMatch:"Vollständige Spielstatistik öffnen", viewGroup:"Gruppe öffnen", viewTeam:"Mannschaft öffnen", openPlayer:"Spielerprofil öffnen",
     navRounds:"Runden", roundsTitle:"Runden & K.-o.-Phase", roundsLede:"Die Gruppenphase läuft vom 11.–27. Juni 2026, danach die K.-o.-Runden. Die Paarungen der K.-o.-Phase stehen nach Abschluss der Gruppenphase fest.",
@@ -524,7 +528,8 @@ function buildFixtures(){
       const m = {
         id:`${g}-${i}`, group:g, stage:"group", md:md,
         a:a, b:b, utc:null, local:null, venue:null, opening:false, freeTv:[],
-        status:"scheduled", scoreA:null, scoreB:null, minute:null, events:[], stats:null
+        status:"scheduled", scoreA:null, scoreB:null, minute:null, events:[], stats:null,
+        penA:null, penB:null, decided:null
       };
       if(conf){
         // keep displayed orientation from confirmed source
@@ -734,7 +739,8 @@ function applyOpenfootball(data){
         if(!m){
           m = {id:koId, group:"", stage:stage, md:null, a:ca, b:cb,
                utc:null, local:null, venue:null, opening:false, freeTv:[],
-               status:"scheduled", scoreA:null, scoreB:null, minute:null, events:[], stats:null};
+               status:"scheduled", scoreA:null, scoreB:null, minute:null, events:[], stats:null,
+               penA:null, penB:null, decided:null};
           MODEL.matches.push(m);
         }
       }
@@ -768,6 +774,17 @@ function applyOpenfootball(data){
         if(m.a===ca){ m.scoreA=+sc[0]; m.scoreB=+sc[1]; } else { m.scoreA=+sc[1]; m.scoreB=+sc[0]; }
         if(m.status!=="live"&&m.status!=="finished") m.status="finished"; // a present score implies it kicked off
         touched++;
+      }
+      // knockout deciders: extra time / penalty shootout. `score.ft` above is the
+      // after-extra-time score (e.g. 1–1); the shootout result is separate, and
+      // `decided` tells us a draw was settled by ET or penalties.
+      if(mm.decided==="pen"||mm.decided==="aet") m.decided=mm.decided;
+      else if(mm.phase==="PEN") m.decided="pen";
+      else if(mm.phase==="AET") m.decided="aet";
+      const pen = mm.score && mm.score.pen;
+      if(Array.isArray(pen) && pen.length>=2 && pen[0]!=null && pen[1]!=null){
+        if(m.a===ca){ m.penA=+pen[0]; m.penB=+pen[1]; } else { m.penA=+pen[1]; m.penB=+pen[0]; }
+        m.decided="pen";
       }
       // goalscorers: openfootball uses goals1 (team1) / goals2 (team2) = [{name,minute}]
       const sideA = (m.a===ca) ? mm.goals1 : mm.goals2;
@@ -942,8 +959,24 @@ function renderRoute(){
 function navigate(){ refreshStatuses(); renderRoute(); focusTitle(); }
 
 /* ----- HOME / NOW ----- */
+/* Visible score, including a knockout decider: a penalty shootout is shown in
+   parentheses ("1–1 (4–2 pen.)") and an extra-time win is tagged ("2–1 a.e.t.").
+   Returns "—" before kick-off. */
+function scoreStr(m){
+  if(m.scoreA==null||m.scoreB==null) return "—";
+  const s=`${m.scoreA}–${m.scoreB}`;
+  if(m.penA!=null&&m.penB!=null) return `${s} (${m.penA}–${m.penB} ${t("penShort")})`;
+  if(m.decided==="aet") return `${s} ${t("aetShort")}`;
+  return s;
+}
+/* How a knockout tie was settled, for the match-info card ("" when not a decider). */
+function decidedText(m){
+  if(m.penA!=null&&m.penB!=null) return `${t("decPen")} ${m.penA}–${m.penB}`;
+  if(m.decided==="aet") return t("decAet");
+  return "";
+}
 function matchLine(m, opts={}){
-  const sc = (m.scoreA!=null&&m.scoreB!=null) ? `${m.scoreA}–${m.scoreB}` : "—";
+  const sc = scoreStr(m);
   const st = statusLabel(m);
   return {sc,st};
 }
@@ -953,8 +986,12 @@ function matchLine(m, opts={}){
    then "1, 0" then the other team. */
 function spokenScore(m){
   const de=STATE.lang==="de";
-  if(m.scoreA!=null && m.scoreB!=null)
-    return `${nameOf(m.a)} ${m.scoreA} ${de?"zu":"to"} ${m.scoreB} ${nameOf(m.b)}`;
+  if(m.scoreA!=null && m.scoreB!=null){
+    let s=`${nameOf(m.a)} ${m.scoreA} ${de?"zu":"to"} ${m.scoreB} ${nameOf(m.b)}`;
+    if(m.penA!=null&&m.penB!=null) s+=`, ${t("spokenPen")} ${m.penA} ${de?"zu":"to"} ${m.penB}`;
+    else if(m.decided==="aet") s+=`, ${t("spokenAet")}`;
+    return s;
+  }
   return `${nameOf(m.a)} ${de?"gegen":"versus"} ${nameOf(m.b)}`;
 }
 const HOME_STEP=6; // how many extra matches each "Show more" reveals
@@ -1057,16 +1094,13 @@ function wireMore(){
 /* Context label: "Group A" for group games, the round name for knockout games. */
 function ctxLabel(m){ return (m.stage && m.stage!=="group") ? stageLabel(m.stage) : `${t("group")} ${m.group}`; }
 function listMatchBtn(m){
-  const hasScore = m.scoreA!=null && m.scoreB!=null;
-  const sc = hasScore ? `${m.scoreA}–${m.scoreB}` : "—";
+  const sc = scoreStr(m);
   const st = statusLabel(m);
   const ko = kickoffText(m);
   const ctx = ctxLabel(m);
   // Spoken score (or "versus" when not yet played) so screen-reader users hear
-  // the result; kickoff date/time is always included.
-  const scoreSpeak = hasScore
-    ? `${nameOf(m.a)} ${m.scoreA} ${STATE.lang==='de'?'zu':'to'} ${m.scoreB} ${nameOf(m.b)}`
-    : `${nameOf(m.a)} ${STATE.lang==='de'?'gegen':'versus'} ${nameOf(m.b)}`;
+  // the result — including a shootout/extra-time decider; kickoff is always read.
+  const scoreSpeak = spokenScore(m);
   const aria = `${scoreSpeak}. ${st}.${ko?` ${t("kickoff")}: ${ko}.`:""} ${ctx}. ${t("openMatch")}`;
   return `<button class="listbtn" type="button" data-go="match/${esc(m.id)}" aria-label="${esc(aria)}">
       <span class="lead">${esc(nameOf(m.a))} <span class="muted">${esc(sc)}</span> ${esc(nameOf(m.b))}
@@ -1224,7 +1258,7 @@ function viewMatchDetail(id){
   const m=MODEL.matches.find(x=>x.id===id)||featuredMatch();
   setDocTitle(`${nameOf(m.a)} – ${nameOf(m.b)}`);
   refreshStatuses();
-  const sc=(m.scoreA!=null&&m.scoreB!=null)?`${m.scoreA}–${m.scoreB}`:"—";
+  const sc=scoreStr(m);
   const st=statusLabel(m);
   // Descriptive heading carries the full spoken result; the big number itself is
   // hidden from screen readers (the team buttons stay readable for navigation).
@@ -1245,6 +1279,7 @@ function viewMatchDetail(id){
       <dt>${m.stage&&m.stage!=="group"?esc(t("stage")):esc(t("group"))}</dt><dd>${esc(m.stage&&m.stage!=="group"?stageLabel(m.stage):m.group)}</dd>
       <dt>${esc(t("kickoff"))}</dt><dd>${kickoffText(m,true)?esc(kickoffText(m,true)):esc(t("tbd"))}</dd>
       <dt>${esc(t("venue"))}</dt><dd>${m.venue?esc(m.venue):esc(t("tbd"))}</dd>
+      ${decidedText(m)?`<dt>${esc(t("decidedBy"))}</dt><dd>${esc(decidedText(m))}</dd>`:""}
       ${m.stage&&m.stage!=="group"?"":`<dt>${esc(t("matchday"))}</dt><dd>${m.md||"—"}</dd>`}
     </dl>
     </div>
@@ -1545,10 +1580,10 @@ function wireGo(){
 /* ---------- featured announcements (score/status changes) ---------- */
 function maybeAnnounceFeatured(){
   const f=featuredMatch();
-  const key=f.id+"|"+(f.scoreA)+"-"+(f.scoreB);
+  const key=f.id+"|"+(f.scoreA)+"-"+(f.scoreB)+"|"+(f.penA)+"-"+(f.penB);
   if(STATE.lastFeaturedKey && key!==STATE.lastFeaturedKey){
     if(f.scoreA!=null){
-      announce(`${t("goalAnnounce")}: ${nameOf(f.a)} ${f.scoreA}, ${nameOf(f.b)} ${f.scoreB}. ${statusLabel(f)}.`);
+      announce(`${t("goalAnnounce")}: ${spokenScore(f)}. ${statusLabel(f)}.`);
     }
   } else if(STATE.lastFeaturedStatus && f.status!==STATE.lastFeaturedStatus){
     announce(`${t("statusAnnounce")}: ${nameOf(f.a)} ${STATE.lang==='de'?'gegen':'vs'} ${nameOf(f.b)} — ${statusLabel(f)}.`);

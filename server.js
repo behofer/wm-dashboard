@@ -230,6 +230,15 @@ function normalize(apiFootball) {
     if (goals.home != null && goals.away != null) {
       match.score.ft = [goals.home, goals.away];
     }
+    // Knockout deciders: API-Football's `goals` is the score after extra time
+    // (e.g. 1-1) and never reflects a shootout. Forward the penalty result and a
+    // marker for HOW the tie was settled so the frontend can show "1-1 (4-2 pen)".
+    const sc = item.score || {};
+    if (sc.penalty && sc.penalty.home != null && sc.penalty.away != null) {
+      match.score.pen = [sc.penalty.home, sc.penalty.away];
+    }
+    if (st === 'PEN') match.decided = 'pen';
+    else if (st === 'AET') match.decided = 'aet';
 
     if (!byRound.has(roundName)) byRound.set(roundName, []);
     byRound.get(roundName).push(match);

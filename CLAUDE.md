@@ -174,9 +174,13 @@ understands. The frontend degrades gracefully if it is absent or blocked.
   a **PAID API-Football plan** (the FREE plan has no 2026 data), so the proxy
   serves real official 2026 fixtures/scores.
 - To swap providers, edit only `fetchUpstream()` and `normalize()` — keep the
-  output shape `{ rounds: [ { name, matches: [ { date, time, group,
-  team1:{name}, team2:{name}, score:{ ft:[h,a] }, status, minute, venue } ] } ] }`
-  where `status` ∈ `scheduled | live | finished`.
+  output shape `{ rounds: [ { name, matches: [ { date, time, group, stage,
+  team1:{name}, team2:{name}, score:{ ft:[h,a], pen:[h,a] }, decided, status,
+  minute, venue } ] } ] }` where `status` ∈ `scheduled | live | finished`.
+  `score.ft` is the score **after extra time** (API-Football's `goals`); the
+  optional `score.pen` carries the penalty-shootout result and `decided` ∈
+  `pen | aet` marks knockout ties settled by a shootout / extra time (so the UI
+  can render "1–1 (4–2 pen.)" or "2–1 a.e.t." and never just "1–1").
 - In-memory 30s cache protects free-tier rate limits.
 
 ### Env vars
